@@ -9,7 +9,7 @@ Datas
 -----
 The JSON datas have to include : 
 - system name (a column family per system)
-- timestamp or time (there is a conversion function to transform to the UNIX format)
+- timestamp or time (there is a conversion function to transform to the javascript format)
 
 Data Model (Cassandra)
 ----------------------
