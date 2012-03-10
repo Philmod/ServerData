@@ -8,8 +8,8 @@ The goal is storing datas coming from several systems that send datas frequently
 Datas
 -----
 The JSON datas have to include : 
-  - system name (a column family per system)
-  - timestamp or time (there is a conversion function to transform to the UNIX format)
+- system name (a column family per system)
+- timestamp or time (there is a conversion function to transform to the UNIX format)
 
 Data Model (Cassandra)
 ----------------------

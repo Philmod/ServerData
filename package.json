@@ -1,0 +1,15 @@
+{
+    "name": "ServerData"
+    , "description": "ServerData"
+    , "version": "0.0.1"
+    , "author": "Philmod"
+    , "homepage": ""
+    , "keywords": ["data", "server", "time-series", "cassandra"]
+    , "engines": { "node": ">= 0.6.7" }
+    , "dependencies": {
+        "express": ">=2.5.8"
+        , "http-status": ">=0.1.1"
+        , "jade": ">= 0.0.1"
+    }
+    , "main" : "app.js"
+}
