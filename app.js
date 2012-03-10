@@ -6,9 +6,7 @@
 var express = require('express')
   , httpStatus = require('http-status')
   , config = require(__dirname + '/config')
-  , routes = require('./routes')
-  , xml2js = require('xml2js')
-  , parser = new xml2js.Parser();
+  , routes = require('./routes');
 
 var app = module.exports = express.createServer()
   , io = require('socket.io').listen(app);

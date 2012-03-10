@@ -1,7 +1,7 @@
 ServerData
 ==========
 
-This is a web server that listens to datas (/datas) in JSON format, and stores it as time-series in Apache Cassandra.
+This is a node.js web server that listens to datas (/datas) in JSON format, and stores it as time-series in Apache Cassandra.
 
 The goal is storing datas coming from several systems that send datas frequently.
 

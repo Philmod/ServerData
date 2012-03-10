@@ -2,21 +2,21 @@ var config = {};
 
 config.server = {};
 config.feed = {};
-config.mongodb = {};
+config.cassandra = {};
+
+config.server.port = 3001;
+config.server.domain = 'http://localhost:3000/';
 
 config.cassandra = {
 	hosts: ['localhost:9160'],
 	keyspace: 'Keyspace1',
 	user: '',
 	password: '',
+	replication_factor: 1,
+	key_validation_class: 'UTF8Type', // The data type of row keys
+	comparator_type: 'LongType', // The data type of column names, in order to sort
+	default_validation_class: 'BytesType' // The default data type of column values
+	// ATTENTION: these 3 parameters can vary from datas CFs to admin CFs...
 }
-
-config.server.port = 3001;
-config.server.domain = 'http://localhost:3000/';
-
-config.feed.limit = 25;
-config.feed.skip = 0;
-
-config.mongodb.connectionUrl = 'mongodb://localhost/jsonfeedserver';
 
 module.exports = config;
