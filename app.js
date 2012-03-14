@@ -1,18 +1,13 @@
-
-/**
- * Module dependencies.
- */
-
 var express = require('express')
   , httpStatus = require('http-status')
   , config = require(__dirname + '/config')
-  , routes = require('./routes');
+  , routes = require('./routes')
+  , models = require('./models');
 
 var app = module.exports = express.createServer()
   , io = require('socket.io').listen(app);
 
 // Configuration
-
 app.configure(function(){
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
@@ -57,33 +52,51 @@ io.configure(function () {
 });
 io.sockets.on('connection', function (socket) {
 
-  socket.emit('news', { hello: 'world' });
-
   socket.on('getDatas', function (data) {
     console.log('getDatas from client, with log = ' + data.log);
-    var dataTemp = require('./models/dataTemp.js');
+    
+    var cfName = data.log,
+      variable = 'cpu',
+      date = new Date().getTime(),
+      start = date-1000*3600*21,
+      end = date+1000*3600*21;
 
-    var data_ = [];
-    for (var i=0; i<100; i++) {
-      var d = new Date(1970+i, 1, 1, 0, 0, 0, 0).getTime(); // ATTENTION: dans Highcharts le mois commence à 1, contrairement au js (!?)
-      data_[i] = [d, i]; 
-    }
-    console.log('ICI : ' + data_[0]);
+    models.getRollUp(cfName, variable, start, end, function(err,res) {
+      if (err) socket.emit('error', err);
+      else {
+        var data = {
+          title: cfName,
+          name: [variable], // one name by curve
+          data: res
+        }
+        console.log('%o',data); 
+        socket.emit('getDatas', data);
+      }
+    })
+    
+    // var dataTemp = require('./models/dataTemp.js');
 
-    var data = {
-      title: 'USD to EUR exchange rate, This TITLE comes from server',
-      name: ['USD to EUR 1', 'USD to EUR 1'],
-      data: data_
-    }
-    socket.emit('getDatas', data);
+    // var data_ = [];
+    // for (var i=0; i<60; i++) {
+    //   var d = new Date(1970, 1, 1, 0, 0+i, 0, 0).getTime(); // ATTENTION: dans Highcharts le mois commence à 1, contrairement au js (!?)
+    //   data_[i] = [d, i]; 
+    // }
+    // console.log('ICI : ' + data_[0]);
 
-    // TEMP: renvoyer régulièrement des nouveaux points
-    setInterval(function() {
-      console.log('i = ' + i);
-      socket.emit('pushData', [new Date(1970+i, 1, 1, 0, 0, 0, 0).getTime(), i]);
-      i++;
-    },1000);
-    ///////////////////////////////////////////////////
+    // var data = {
+    //   title: 'USD to EUR exchange rate, This TITLE comes from server',
+    //   name: ['USD to EUR 1', 'USD to EUR 1'],
+    //   data: data_
+    // }
+    // socket.emit('getDatas', data);
+
+    // // TEMP: renvoyer régulièrement des nouveaux points
+    // setInterval(function() {
+    //   console.log('i = ' + i);
+    //   socket.emit('pushData', [new Date(1970+i, 1, 1, 0, 0, 0, 0).getTime(), i]);
+    //   i++;
+    // },1000);
+    // ///////////////////////////////////////////////////
 
   });
 

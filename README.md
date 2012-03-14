@@ -5,11 +5,11 @@ This is a node.js web server that listens to datas (/datas) in JSON format, and 
 
 The goal is storing datas coming from several systems that send datas frequently.
 
-Datas
------
-The JSON datas have to include:
+JSON Datas
+----------
 - system name (a column family per system),
 - timestamp or time (there is a conversion function to transform to the javascript format)
+- all the other properties are variable names and values
 
 Data Model (Cassandra)
 ----------------------

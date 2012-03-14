@@ -14,8 +14,8 @@ config.cassandra = {
 	password: '',
 	replication_factor: 1,
 	key_validation_class: 'UTF8Type', // The data type of row keys
-	comparator_type: 'LongType', // The data type of column names, in order to sort
-	default_validation_class: 'BytesType' // The default data type of column values
+	comparator_type: 'UTF8Type', // The data type of column names, in order to sort
+	default_validation_class: 'UTF8Type' // The default data type of column values
 	// ATTENTION: these 3 parameters can vary from datas CFs to admin CFs...
 }
 

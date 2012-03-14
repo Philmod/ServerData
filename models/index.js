@@ -10,6 +10,11 @@ timeLV2JS = function(time) {
 	// JAVASCRIPT timestamp : number of MILLISECONDS since 1970/01/01
 	time = time*1000; // seconds --> milliseconds
 	time = time + timeLV0; // add of the offset timeLV0
+
+	var dat = new Date();
+	dat.setTime(time);
+	console.log('date = ' + dat);
+
 	return time;
 }
 
@@ -36,9 +41,6 @@ exports.set = set = function(jsonObj, callbackSet) {
 	}
 	if (!system) return callbackSet('The system name is not specified', null);
 	if (!time) return callbackSet('There is no timestamp', null);
-
-	console.log('SYSTEM : ' + system);
-
 
 	// 0. cfName + rowKeys + columns + ...
 	var cfName = system;
@@ -79,16 +81,27 @@ exports.set = set = function(jsonObj, callbackSet) {
 					});
 				})(i);
 			}
+			// 3. Insert new variable(s) in 'Systems' CF (if doesn't exist)
+			helenus.getRow('Systems', system, function(err,row,cfSystems) {
+	      if (err) console.log('ERROR Systems new variables : ' + err);
+	      else {
+	      	for (var varName in vars) {
+		      	var column = row.get(varName);
+		      	if (!column) {
+		      		var column = {};
+	      			column[varName] = '';
+							cfSystems.insert(system, column, function(err){ // INSERT
+		            if (err) console.log('ERROR Systems new variables 2 : ' + err);
+		          });
+		        }
+		      }
+		    }
+	    });
 		}
 	],
 	function(err) {
 		callbackSet(err);
 	})
-	
-
-	
-	
-	
 }
 
 // The vars2cassandra function create the various row keys (for data and roll-up), and the columns (name, value)
@@ -165,5 +178,67 @@ setRollup = function(cfName, rowKey, timestamp, value, callback) {
 	})
 }
 
+exports.getRollUp = getRollUp = function(cfName, variable, start, end, callback) {
+	var rowKey = dif2rowKey(start,end,variable);
+	if (rowKey.error) return callback(rowKey.error);
+	var results = new Array;
+	var k=0;
 
+	var iterator = function(rowKey, cb) {
+    helenus.getRow(cfName, rowKey, function(err,row,cf) {
+      if (err) cb(err);
+      else {
+      	var columns = row.nameSlice(start,end);
+      	for (var i=0; i<columns.length; i++) {
+      		// results.push = [columns[i].name, columns[i].value];
+      		// results.push(columns[i]);
+      		var obj = JSON.parse(columns[i].value);
+      		results[k] = [parseInt(columns[i].name), obj.value];
+      		++k;
+      	}
+	      cb(null);
+	    }
+    });
+  }
+	async.forEach(rowKey.rowKeys, iterator, function(err){
+    if (err) callback(err);
+    else {
+    	console.log('results.length = ' + results.length);
+    	callback(null,results);
+	  }
+	});
+}
 
+// Create the rowKey name from start, end and variable name
+dif2rowKey = function(start, end, variable) { // start, end in javascript timestamp
+	var dif = end - start,
+		out = {error: null, rowKeys: new Array};
+	if (dif<0 || !dif) {
+		out.error = 'dif2rowKey: The end must be greater than the start';
+		return out;
+	}
+	var date = new Date(); 
+	date.setTime(start);
+	var jsTimestamp = {
+		day: 1000*3600*24,
+		month: 1000*3600*24*31,
+		year: 1000*3600*24*365
+	};
+	if (dif < jsTimestamp.day) { // P < 1 jour
+		out.rowKeys[0] = variable + '-rollup-m-' + date.toFormat("YYYYMMDD");
+	}
+	else if (dif < jsTimestamp.month && dif >= jsTimestamp.day) { // 1 month > P > 1 jour
+		out.rowKeys[0] = variable + '-rollup-h-' + date.toFormat("YYYYMM") + '00';
+	}
+	else { // P > 1 month
+		var startYYYY = date.toFormat("YYYY");
+		date.setTime(end);
+		var endYYYY = date.toFormat("YYYY");
+		var k = 0;
+		for (var i = startYYYY; i<=endYYYY; i++) {
+			out.rowKeys[k] = variable + '-rollup-d-' + i + '0000';
+			k++;
+		}
+	}
+	return out;
+}

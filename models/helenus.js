@@ -1,7 +1,8 @@
 // https://github.com/simplereach/helenus
 var async = require('async'),
   EventEmitter = require('events').EventEmitter,
-  config = require('../config.js');
+  config = require('../config.js'),
+  model = require('../models/index.js');
 
 var helenus = require('helenus')
   , pool = new helenus.ConnectionPool({
@@ -27,14 +28,12 @@ pool.connect(function(err, ks){
   } else {
     keyspace = ks;
     console.log('keyspace = ' + keyspace.definition.name);
-    connectEmitter.emit('connected');
 
-    ///// TEST /////
-    /*pool.cql("SELECT * FROM '%s' WHERE KEY = '%s'", ['V2I_MOD','test'], function(err, results){
-      console.log('CQL RESULTS : ');
-      console.log(err, results);
-    }); */
-    ////////////////
+    getOrCreateCF('Systems', function(err, cf){ // include the systems informations
+      getOrCreateCF('Users', function(err, cf){ // include the users informations and systems linked
+        connectEmitter.emit('connected');
+      })
+    })
   }
 });
 
@@ -53,17 +52,51 @@ getOrCreateCF = function(cfName, callback) {
     function() {
       keyspace.get(cfName, function(err, cf){
         if (err) { // if ERR, the CF doesn't exist, so we create it
-          keyspace.createColumnFamily(cfName, function(err) { 
+          var options = {
+            key_validation_class: config.cassandra.key_validation_class,
+            comparator_type: config.cassandra.comparator_type,
+            default_validation_class: config.cassandra.default_validation_class
+          };
+          if (cfName == 'Systems' || cfName == 'Users') {
+            options.comparator_type = 'UTF8Type';
+            options.default_validation_class = 'UTF8Type';
+          }
+          keyspace.createColumnFamily(cfName, options, function(err) { // create the column family
             if (err) return callback(err, null);
             else {
-              keyspace.get(cfName, function(err, cf){
+              // get the new keyspace
+              keyspace.get(cfName, function(err, cf){ 
                 if (err) return callback(err);
                 else callback(null, cf);
               });
             }
           });
+          // Insert new system in 'Users' CF, 'admin' rowKey (if doesn't exist)
+          getRow('Users', 'admin', function(err,row,cfUsers) {
+            if (err) console.log('ERROR Users getRow admin : ' + err);
+            else {
+              var columnsSys = row.nameSlice('s000000','s999999');
+              // check if this system is already in the row
+              var bool = false;
+              for (var i=0; i<columnsSys.length; i++) {
+                if (columnsSys[i].value == cfName) bool = true;
+              }
+              if (!bool) {
+                var numSys = columnsSys.length+1;
+                numSys = numSys.toString();
+                for (var i=numSys.length; i<6; i++) { numSys = '0' + numSys; } // we won't have one million systems...
+                numSys = 's' + numSys;
+                var column = {}; column[numSys] = cfName;
+                cfUsers.insert('admin', column, function(err){ // INSERT
+                  if (err) console.log('ERROR Systems new variables 2 : ' + err);
+                  else console.log('NEW SYSTEM in USERS CF : ' + cfName)
+                });
+              }
+              else { console.log('Already exists'); }
+            }
+          })
         }
-        else callback(null, cf);
+        else { callback(null, cf); }
       })
     }
   ]);    
