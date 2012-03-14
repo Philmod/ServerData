@@ -1,0 +1,10 @@
+<h3>Visualize test</h3>
+
+<select id="ProductLineID" name="ProductLineID>
+    <option value="">--select a product line--</option>
+    <% _(productLineOptions).each(function(pl) { %>
+      <option value="<%= pl.ID %>"><%= pl.Name %></option>
+    <% }); %>
+</select>
+
+<div id="chart"></div>

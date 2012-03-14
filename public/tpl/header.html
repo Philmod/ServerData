@@ -1,0 +1,14 @@
+<div class="fill">
+  <div class="container">
+    <a href="#" class="brand">
+      <%= title %>
+    </a>
+    <ul class="nav">
+      <% for (i in links) { %>
+        <li>
+          <a href=<%= links[i].link %>><%= links[i].desc %></a>
+        </li>
+      <% } %>
+    </ul>
+  </div>
+</div>

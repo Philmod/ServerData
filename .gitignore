@@ -1,7 +1,7 @@
 Labview
 documents
-public
-views
+public/temp
+views/chartTest.jade
 node_modules
 models/tempDatas.js
 models/testGet.js

@@ -6,8 +6,11 @@ var postedDatas = new Array();
 /*
  * GET home page.
  */
-exports.get = function(req, res){
-  res.send('En construction...', 200);
+exports.index = function(req, res){
+  res.render('index',{
+    title: "ServerData",
+    host: ""
+  })
 };
 
 /*

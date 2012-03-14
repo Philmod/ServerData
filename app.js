@@ -26,7 +26,7 @@ app.configure('production', function(){
 });
 
 // Routes
-app.get('/', routes.get);
+app.get('/', routes.index);
 app.post('/datas', routes.postDatas);
 app.get('/series', routes.getSeries);
 app.get('/series/id{id}/data/?start={start}&end={end}', routes.getSeriesId);
