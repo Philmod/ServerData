@@ -35,6 +35,12 @@ app.get('/test', function(req,res) {
   res.render('chartTest.jade', { status: 200, title: 'test Chart', layout: false });
 })
 
+/*app.get('*', function(req, res){  // to redirect all the other requests
+  console.log('%o',req.url);
+  res.redirect('/');
+});*/
+
+
 app.listen(config.server.port);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
 
@@ -51,26 +57,30 @@ io.configure(function () {
   io.set('log level', 2);
 });
 io.sockets.on('connection', function (socket) {
+  // setInterval(function() {
+  //   socket.emit('message','voici...');
+  // },1000);
+  socket.on('message', function (data) {
+    console.log('MESSAGE : ' + data);
+  })
+
+  socket.on('login', function (data) {
+    console.log('LOGIN : ' + data);
+  })
 
   socket.on('getDatas', function (data) {
-    console.log('getDatas from client, with log = ' + data.log);
+    console.log('getDatas from client, with log = ' + data.sys + ' , var=' + data.variable + ' , start=' + data.start + ' , end=' + data.end);
     
-    var cfName = data.log,
-      variable = 'cpu',
-      date = new Date().getTime(),
-      start = date-1000*3600*21,
-      end = date+1000*3600*21;
-
-    models.getRollUp(cfName, variable, start, end, function(err,res) {
+    models.getRollUp(data.sys, data.variable, data.start, data.end, function(err,res) {
       if (err) socket.emit('error', err);
       else {
-        var data = {
-          title: cfName,
-          name: [variable], // one name by curve
+        var out = {
+          title: data.sys,
+          name: [data.variable], // one name by curve
           data: res
         }
-        console.log('%o',data); 
-        socket.emit('getDatas', data);
+        console.log('%o',out); 
+        socket.emit('getDatas', out);
       }
     })
     

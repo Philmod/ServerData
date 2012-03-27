@@ -1,4 +1,4 @@
-App.visualizeView = Backbone.View.extend({
+App.Views.visualizeView = Backbone.View.extend({
 
 	el: '.content',
   

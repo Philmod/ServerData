@@ -1,9 +1,10 @@
 
 $(function() {
-	tpl.loadTemplates(['home', 'about', 'contact', 'header', 'visualize'],
+	tpl.loadTemplates(['home', 'about', 'contact', 'header', 'visualize', 'login'],
     function () {
-        App.router = new App.Router;
- 			  return Backbone.history.start();
+      App.router = new App.Router;
+      App.socket.connect();
+	  	return Backbone.history.start();
     }
   );
 });

@@ -1,4 +1,4 @@
-App.topBarView = Backbone.View.extend({
+App.Views.topBarView = Backbone.View.extend({
   el: '.topbar',
   initialize: function() {
     this.template = _.template(tpl.get('header'));

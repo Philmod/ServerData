@@ -1,4 +1,4 @@
-App.homeView = Backbone.View.extend({
+App.Views.homeView = Backbone.View.extend({
 
   el: '.content',
 
