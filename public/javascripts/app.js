@@ -77,7 +77,11 @@ App.socket = {
   onGetDatas: function(e) {
     console.log('SOCKET getDatas : ' + e);
     console.log('%o',e);
-    createChart(e);
+    if (e.data.length==0) {
+      chart.hideLoading();
+      alert('No datas in this range!')
+    }
+    else createChart(e);
   },
 
   connect: function () {
