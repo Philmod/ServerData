@@ -44,7 +44,7 @@ exports.set = set = function(jsonObj, callbackSet) {
 
 	// 0. cfName + rowKeys + columns + ...
 	var cfName = system;
-	var datas = vars2cassandra(vars,time);
+	var datas = vars2cassandra(vars,time);xs
 
 	async.parallel([
 		function(CB) {
@@ -226,9 +226,11 @@ dif2rowKey = function(start, end, variable) { // start, end in javascript timest
 	};
 	if (dif < jsTimestamp.day) { // P < 1 jour
 		out.rowKeys[0] = variable + '-rollup-m-' + date.toFormat("YYYYMMDD");
+		out.rowKeys[1] = variable + '-rollup-m-' + date.add({days:1}).toFormat("YYYYMMDD"); // could be on two days
 	}
 	else if (dif < jsTimestamp.month && dif >= jsTimestamp.day) { // 1 month > P > 1 jour
 		out.rowKeys[0] = variable + '-rollup-h-' + date.toFormat("YYYYMM") + '00';
+		out.rowKeys[1] = variable + '-rollup-h-' + date.add({months:1}).toFormat("YYYYMM") + '00'; // could be on two months
 	}
 	else { // P > 1 month
 		var startYYYY = date.toFormat("YYYY");

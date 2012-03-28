@@ -5,3 +5,4 @@ views/chartTest.jade
 node_modules
 models/tempDatas.js
 models/testGet.js
+temp.js

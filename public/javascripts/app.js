@@ -172,7 +172,8 @@ function createChart(inputData) {
         }
     },
     tooltip: {
-      pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
+      xDateFormat: '%A, %Y-%m-%d, %H:%MZ',
+      pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> <br/>',
       valueDecimals: 2
     },
     series: [
@@ -218,7 +219,8 @@ function selection(event) {
     chart.showLoading();
     
     // request the data - see http://api.jquery.com/jQuery.get/
-    App.socket.emit('getDatas', { sys: 'sysTest', variable: 'cpu2', start: min, end: max });
+    console.log('start = ' + min + ' , end : ' + max);
+    App.socket.emit('getDatas', { sys: 'sysTest', variable: 'cpu', start: min, end: max });
     
     return false;
   }
@@ -231,5 +233,5 @@ function resetSelection(chart) {
     start = date-1000*3600*24*365*30,
     end = date+1000*3600*24*365*1;
   console.log('#visualize : ' + start + ' - ' + end);
-  App.socket.emit('getDatas', { sys: 'sysTest', variable: 'cpu2', start: start, end: end });
+  App.socket.emit('getDatas', { sys: 'sysTest', variable: 'cpu', start: start, end: end });
 }

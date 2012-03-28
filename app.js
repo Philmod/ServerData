@@ -79,7 +79,7 @@ io.sockets.on('connection', function (socket) {
           name: [data.variable], // one name by curve
           data: res
         }
-        console.log('%o',out); 
+        //console.log('%o',out); 
         socket.emit('getDatas', out);
       }
     })
