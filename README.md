@@ -48,4 +48,3 @@ TODO list
 - A web page to visualize the datas: each client have a login/pass to analyze its systems, an admin page
 - Authentification
 - Pub/Sub: when a system sends datas to the server, broadcast to the connected clients (socket.io)
-- 

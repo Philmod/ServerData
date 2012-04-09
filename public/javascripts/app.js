@@ -65,7 +65,9 @@ App.Socket = {
 
   provider: io.connect(host),
 
-  onConnect: function () {},
+  onConnect: function () {
+    App.Socket.emit('isLogged'); // check if this session is a logged user
+  },
 
   onMessage: function (e) {
     console.log('SOCKET MESSAGE : ' + e);
@@ -90,7 +92,10 @@ App.Socket = {
     console.log('onLogin : ' + e);
     console.log('%o',e);
 
-    App.Models.user.set({loggedIn: e.loggedIn});
+    App.Models.user.set({
+      email: e.email,
+      loggedIn: e.loggedIn
+    });
 
     // TODO: Add to system collections, and then the variables
 

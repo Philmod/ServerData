@@ -3,7 +3,8 @@ App.Views.LoginView = Backbone.View.extend({
 	el: "#loginLI", 
 
   events: {
-    "click #loginButton": "developLoginform"
+    "click #loginButton": "developLoginform",
+    "click #logOutButton": "logOut"
   },
 
   initialize: function () {
@@ -44,6 +45,10 @@ App.Views.LoginView = Backbone.View.extend({
     this.model.login();
     /////
     
+  },
+
+  logOut: function() {
+    this.model.logOut();
   },
 
   render: function() {

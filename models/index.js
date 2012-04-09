@@ -256,6 +256,7 @@ dif2rowKey = function(start, end, variable) { // start, end in javascript timest
 exports.login = function(login,pass,callback) {
 	var out = {
   	loggedIn: false,
+  	email: null,
   	systems: null
   };
 	helenus.getRow('Users',login, function(err,row,cf) {
@@ -280,6 +281,7 @@ exports.login = function(login,pass,callback) {
 				  	systemsVar[systems[i]] = results[i];
 				  }
 				  out.loggedIn = true;
+				  out.email = login;
 				  out.systems = systemsVar;
 				  callback(err,out);
 				});

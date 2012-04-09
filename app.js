@@ -4,10 +4,17 @@ var express = require('express')
   , routes = require('./routes')
   , models = require('./models')
   , RedisStore = require('connect-redis')(express)
-  , parseCookie = require('connect').utils.parseCookie;
+  , parseCookie = require('connect').utils.parseCookie
+  , Session = require('connect').middleware.session.Session
+  , redis = require('redis')
+  , rc = redis.createClient();
 
 var app = module.exports = express.createServer()
   , io = require('socket.io').listen(app);
+
+rc.on('error', function(err) {
+  console.log('ERROR REDIS rc : ' + err);
+});
 
 // Configuration
 app.configure(function(){
@@ -69,29 +76,22 @@ io.configure(function () {
   //io.set('transports', ['websocket','flashsocket','xhr-polling']); // 
   io.set('log level', 2);
   io.set('authorization', function(handshakeData, callback) {
-    // Read cookies from handshake headers
-    var cookies = parseCookie(handshakeData.headers.cookie);
-    // We're now able to retrieve session ID
-    var sessionID = cookies['connect.sid'];
-    // No session? Refuse connection
-    if (!sessionID) {
-      callback('No session', false);
+    var cookies = parseCookie(handshakeData.headers.cookie); // Read cookies from handshake headers
+    var sessionID = cookies['connect.sid']; // We're now able to retrieve session ID
+    if (!sessionID) { // No session? Refuse connection
+      return callback('No session', false);
     } else {
-      // Store session ID in handshake data, we'll use it later to associate session with open sockets
-      handshakeData.sessionID = sessionID;
-      // On récupère la session utilisateur, et on en extrait son username
+      handshakeData.sessionID = sessionID; // Store session ID in handshake data, we'll use it later to associate session with open sockets
       app.sessionStore.get(sessionID, function (err, session) {
-        /*if (!err && session && session.username) {
-          // On stocke ce username dans les données de l'authentification, pour réutilisation directe plus tard
-          handshakeData.username = session.username;
-          // OK, on accepte la connexion
-          callback(null, true);
-        } else {
-          // Session incomplète, ou non trouvée
-          callback(err || 'User not authenticated', false);
-        }*/
-        // on peut mettre des infos en faisant : handshakeData.XXX = YYY; on le récupère ensuite avec socket.handshake.XXX
-        callback(null, true); // we authorize all the sockets for now
+        if (err || !session) return callback('Error',false);
+        else {
+          session.temp4 = 'test4';
+
+          app.sessionStore.set(sessionID, session);
+
+          handshakeData.session = new Session(handshakeData,session); // create a session object, passing data as request and our just acquired session data
+          callback(null, true); // we authorize all the sockets for now
+        }
       });
     }
   })
@@ -106,26 +106,36 @@ io.sockets.on('connection', function (socket) {
   // },1000);
   socket.on('message', function (data) {
     console.log('MESSAGE : ' + data);
-  })
+  });
 
-
+  //// LOG ////
+  socket.on('isLogged', function(){
+    if (socket.handshake.session.loggedIn) {
+      socket.emit('login',socket.handshake.session.resLogin);
+    }
+  });
   socket.on('login', function (data) {
-    console.log('LOGIN : ' + data); 
-    console.log('%o',data);
-    // TODO: put loggedIn in Session
-
-    // Login & Get the list of systems he has access to
     models.login(data.email,data.password,function(err,res) {
-      console.log('RES : ');
-      console.log('%o',res);
-
-      //app.sessionStore.set('loggedIn', res.loggedIn);
-      console.log('%o',app.sessionStore);
-      console.log('%o',socket.handshake);
+      socket.handshake.session.loggedIn = res.loggedIn; // Add a property to the session
+      if (res.loggedIn) {
+        console.log('%o',data);
+        socket.handshake.session.email = data.email;
+        socket.handshake.session.resLogin = res;
+      }
+      else socket.handshake.session.email = null;
+      app.sessionStore.set(socket.handshake.sessionID, socket.handshake.session); // SAVE
 
       socket.emit('login',res);
     })
-  })
+  });
+  socket.on('logOut', function() {
+    console.log('LOG OUT');
+    socket.handshake.session.loggedIn = false;
+    socket.handshake.session.email = null;
+    socket.handshake.session.resLogin = null;
+    app.sessionStore.set(socket.handshake.sessionID, socket.handshake.session);
+  });
+  /////////////
 
   socket.on('getDatas', function (data) {
     console.log('getDatas from client, with log = ' + data.sys + ' , var=' + data.variable + ' , start=' + data.start + ' , end=' + data.end);

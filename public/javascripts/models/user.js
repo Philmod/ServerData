@@ -2,7 +2,7 @@
 App.Models.User = Backbone.Model.extend({
 
   defaults : {
-    email : 'philippe.modard@gmail.com',
+    email : '',
     password : '',
     loggedIn: false,
     systems : new Array
@@ -13,24 +13,21 @@ App.Models.User = Backbone.Model.extend({
   },
 
   login: function(){
-  	console.log('MODELS User login');
-  	
+    
     App.Socket.emit('login',{
       email: this.get('email'),
       password: this.get('password')
     });
 
-  	
-    /*var self = this;
-    $.post("/user/login", 
-      this.toJSON(),
-      function(data){
-        if (data.loggedIn){
-          self.trigger("loggedIn", self);
-        }
-      }
-    );*/
-		
+  },
+
+  logOut: function() {
+    this.set({
+      loggedIn: false,
+      email: null,
+      password: null
+    });
+    App.Socket.emit('logOut');
   },
 
   loggedIn: function(){
