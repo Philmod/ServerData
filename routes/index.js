@@ -7,6 +7,7 @@ var postedDatas = new Array();
  * GET home page.
  */
 exports.index = function(req, res){
+  console.log('GET INDEX');
   res.render('index',{
     title: "ServerData",
     host: ""

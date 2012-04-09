@@ -2,7 +2,9 @@ var express = require('express')
   , httpStatus = require('http-status')
   , config = require(__dirname + '/config')
   , routes = require('./routes')
-  , models = require('./models');
+  , models = require('./models')
+  , RedisStore = require('connect-redis')(express)
+  , parseCookie = require('connect').utils.parseCookie;
 
 var app = module.exports = express.createServer()
   , io = require('socket.io').listen(app);
@@ -11,8 +13,14 @@ var app = module.exports = express.createServer()
 app.configure(function(){
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
-  app.register('.jade', require('jade'));
+  app.register('.jade', require('jade')); 
   app.use(express.bodyParser());
+  app.use(express.cookieParser()); // Allow parsing cookies from request headers
+  app.sessionStore = new RedisStore;
+  app.use(express.session({ 
+    secret: "philmod secret", 
+    store: this.sessionStore
+  }));
   app.use(express.methodOverride());
   app.use(app.router);
   app.use(express.static(__dirname + '/public'));
@@ -35,6 +43,11 @@ app.get('/test', function(req,res) {
   res.render('chartTest.jade', { status: 200, title: 'test Chart', layout: false });
 })
 
+app.post('/login', function(req,res) {
+  console.log('APP . POST /LOGIN');
+
+})
+
 /*app.get('*', function(req, res){  // to redirect all the other requests
   console.log('%o',req.url);
   res.redirect('/');
@@ -55,8 +68,39 @@ io.configure(function () {
   io.set('transports', ['websocket','flashsocket','xhr-polling','jsonp-polling','htmlfile']);
   //io.set('transports', ['websocket','flashsocket','xhr-polling']); // 
   io.set('log level', 2);
+  io.set('authorization', function(handshakeData, callback) {
+    // Read cookies from handshake headers
+    var cookies = parseCookie(handshakeData.headers.cookie);
+    // We're now able to retrieve session ID
+    var sessionID = cookies['connect.sid'];
+    // No session? Refuse connection
+    if (!sessionID) {
+      callback('No session', false);
+    } else {
+      // Store session ID in handshake data, we'll use it later to associate session with open sockets
+      handshakeData.sessionID = sessionID;
+      // On récupère la session utilisateur, et on en extrait son username
+      app.sessionStore.get(sessionID, function (err, session) {
+        /*if (!err && session && session.username) {
+          // On stocke ce username dans les données de l'authentification, pour réutilisation directe plus tard
+          handshakeData.username = session.username;
+          // OK, on accepte la connexion
+          callback(null, true);
+        } else {
+          // Session incomplète, ou non trouvée
+          callback(err || 'User not authenticated', false);
+        }*/
+        // on peut mettre des infos en faisant : handshakeData.XXX = YYY; on le récupère ensuite avec socket.handshake.XXX
+        callback(null, true); // we authorize all the sockets for now
+      });
+    }
+  })
 });
+
 io.sockets.on('connection', function (socket) {
+
+  var socket_username = null;
+
   // setInterval(function() {
   //   socket.emit('message','voici...');
   // },1000);
@@ -64,8 +108,23 @@ io.sockets.on('connection', function (socket) {
     console.log('MESSAGE : ' + data);
   })
 
+
   socket.on('login', function (data) {
-    console.log('LOGIN : ' + data);
+    console.log('LOGIN : ' + data); 
+    console.log('%o',data);
+    // TODO: put loggedIn in Session
+
+    // Login & Get the list of systems he has access to
+    models.login(data.email,data.password,function(err,res) {
+      console.log('RES : ');
+      console.log('%o',res);
+
+      //app.sessionStore.set('loggedIn', res.loggedIn);
+      console.log('%o',app.sessionStore);
+      console.log('%o',socket.handshake);
+
+      socket.emit('login',res);
+    })
   })
 
   socket.on('getDatas', function (data) {

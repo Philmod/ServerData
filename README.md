@@ -28,6 +28,16 @@ Use
 ---
 app.js
 
+Dependencies
+------------
+- Apache Cassandra: database for the time-series datas, users and systems informations
+- Redis: advanced key-value store for sessions and pub/sub
+- Express.js: web development framework
+- Socket.io: websocket API
+- Backbone.js: MVC
+- Twitter bootstrap: simple and flexible HTML, CSS, and Javascript for popular user interface components and interactions
+- Highcharts: interactive Javascript charts
+
 Contribute
 ----------
 Please feel free to contribute.

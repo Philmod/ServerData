@@ -3,7 +3,7 @@ window.App = {
   Collections: {},
   Models: {},
   Views: {},
-  socket: {}
+  Socket: {}
 };
 
 App.Router = Backbone.Router.extend({
@@ -11,54 +11,56 @@ App.Router = Backbone.Router.extend({
     "": "home",
     "visualize": "visualize",
     "about": "about",
-    "contact": "contact",
-    "login": "login"
+    "contact": "contact"
   },
 
   initialize: function() {
-    App.Views.topBarView = new App.Views.topBarView;
+    //// header View ////
+    App.Views.topBarView = new App.Views.TopBarView();
     App.Views.topBarView.render();
+    /////////////////////
+
+    //// LOGIN FORM in the header////
+    if (!App.Views.loginView) {
+      App.Models.user = new App.Models.User;
+      App.Views.loginView = new App.Views.LoginView({model: App.Models.user});
+    }
+    App.Views.loginView.render();
+    /////////////////////////////////
   },
 
   visualize: function() {
-    if (!App.Views.visualizeView.render) {
-      App.Views.visualizeView = new App.Views.visualizeView();
+    if (!App.Views.visualizeView) {
+      App.Views.visualizeView = new App.Views.VisualizeView();
     }
     resetSelection(); 
     App.Views.visualizeView.render();
   },
 
   home: function() {
-    if (!App.Views.homeView.render) {
-      App.Views.homeView = new App.Views.homeView();
+    if (!App.Views.homeView) {
+      App.Views.homeView = new App.Views.HomeView();
     }
     App.Views.homeView.render();
   },
 
   about: function() {
-    if (!App.Views.aboutView.render) {
-      App.Views.aboutView = new App.Views.aboutView();
+    if (!App.Views.aboutView) {
+      App.Views.aboutView = new App.Views.AboutView();
     }
     App.Views.aboutView.render();
   },
 
   contact: function() {
-    if (!App.Views.contactView.render) {
-      App.Views.contactView = new App.Views.contactView();
+    if (!App.Views.contactView) {
+      App.Views.contactView = new App.Views.ContactView();
     }
     App.Views.contactView.render();
-  },
-
-  login: function() {
-    if (!App.Views.LoginView.render) {
-      App.Views.LoginView = new App.Views.LoginView();
-    }
-    App.Views.LoginView.render();
   }
 
 });
 
-App.socket = {
+App.Socket = {
   a: null,
 
   provider: io.connect(host),
@@ -71,28 +73,39 @@ App.socket = {
   },
 
   onDisconnect: function () {
-    setInterval(App.socket.connect, 300)
+    setInterval(App.Socket.connect, 300)
   },
 
   onGetDatas: function(e) {
     console.log('SOCKET getDatas : ' + e);
     console.log('%o',e);
-    if (e.data.length==0) {
+    if (e.data.length==0 && typeof(chart)!='undefined') {
       chart.hideLoading();
       alert('No datas in this range!')
     }
     else createChart(e);
   },
 
+  onLogin: function(e) {
+    console.log('onLogin : ' + e);
+    console.log('%o',e);
+
+    App.Models.user.set({loggedIn: e.loggedIn});
+
+    // TODO: Add to system collections, and then the variables
+
+  },
+
   connect: function () {
-    a = App.socket.provider;
+    a = App.Socket.provider;
     if (a.connected) {
         return
     }
-    a.on("connect", App.socket.onConnect);
-    a.on("message", App.socket.onMessage);
-    a.on("disconnect", App.socket.onDisconnect);
-    a.on("getDatas", App.socket.onGetDatas)
+    a.on("connect", App.Socket.onConnect);
+    a.on("message", App.Socket.onMessage);
+    a.on("disconnect", App.Socket.onDisconnect);
+    a.on("getDatas", App.Socket.onGetDatas);
+    a.on('login', App.Socket.onLogin);
   },
 
   emit: function(type,data) {
@@ -224,7 +237,7 @@ function selection(event) {
     
     // request the data - see http://api.jquery.com/jQuery.get/
     console.log('start = ' + min + ' , end : ' + max);
-    App.socket.emit('getDatas', { sys: 'sysTest', variable: 'cpu', start: min, end: max });
+    App.Socket.emit('getDatas', { sys: 'V2I_MOD', variable: 'CPU', start: min, end: max });
     
     return false;
   }
@@ -237,5 +250,5 @@ function resetSelection(chart) {
     start = date-1000*3600*24*365*30,
     end = date+1000*3600*24*365*1;
   console.log('#visualize : ' + start + ' - ' + end);
-  App.socket.emit('getDatas', { sys: 'sysTest', variable: 'cpu', start: start, end: end });
+  App.Socket.emit('getDatas', { sys: 'V2I_MOD', variable: 'CPU', start: start, end: end });
 }

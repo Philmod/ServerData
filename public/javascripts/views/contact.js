@@ -1,4 +1,4 @@
-App.Views.contactView = Backbone.View.extend({
+App.Views.ContactView = Backbone.View.extend({
 
 	el: '.content',
   

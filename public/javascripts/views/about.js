@@ -1,4 +1,4 @@
-App.Views.aboutView = Backbone.View.extend({
+App.Views.AboutView = Backbone.View.extend({
 
 	el: '.content',
   

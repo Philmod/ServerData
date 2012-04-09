@@ -1,4 +1,4 @@
-App.Views.visualizeView = Backbone.View.extend({
+App.Views.VisualizeView = Backbone.View.extend({
 
 	el: '.content',
   
@@ -8,6 +8,6 @@ App.Views.visualizeView = Backbone.View.extend({
 
   render: function() {
     return $(this.el).html(this.template());
-  }
+  },
 
 });

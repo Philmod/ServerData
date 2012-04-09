@@ -52,17 +52,42 @@ body {
   border: 0;
 }
 
-form {
-  width: 400px;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  padding: 20px;
-  margin: 30px auto;
+/*ul li{
+  position: relative
 }
-form label {
-  display: inline-block;
-  width: 100px;
+ul li form{
+  position: absolute;
+  top: 33px;
+  right: 0px;
+  display: none;
+}*/
+
+#loginLI {
+  position: absolute;
+  right: -600px;
 }
-form .btn {
-  margin: 0 0 0 100px;
+
+.topbar ul li form {
+  background: #808080;
+  position: absolute;
+  width: 180px;
+  top: 33px;
+  right: 0px;
+  padding: 10px;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  display: none;
+}
+.topbar ul li form input[type=text],
+.topbar ul li form input[type=password]{
+  padding: 5px;
+  border: 1px solid #8c969c;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+  outline: none;
+  width: 170px;
+  margin-bottom: 5px;
+  color: #999;
 }

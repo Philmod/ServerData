@@ -11,9 +11,9 @@ timeLV2JS = function(time) {
 	time = time*1000; // seconds --> milliseconds
 	time = time + timeLV0; // add of the offset timeLV0
 
-	var dat = new Date();
+	/*var dat = new Date();
 	dat.setTime(time);
-	console.log('date = ' + dat);
+	console.log('date = ' + dat);*/
 
 	return time;
 }
@@ -24,7 +24,7 @@ exports.set = set = function(jsonObj, callbackSet) {
 	for (var i in jsonObj) {
 		if (i == 'system') {
 			var system = jsonObj[i];
-	  	system = system.replace("-","_"); // the column family name can't contain "-"
+	  	system = system.replace(/-/g,"_"); // the column family name can't contain "-"
 	  }
 		else if ( (i == 'timestamp') || (i == 'time') ) 
 			var time = timeLV2JS(jsonObj[i]);
@@ -42,9 +42,11 @@ exports.set = set = function(jsonObj, callbackSet) {
 	if (!system) return callbackSet('The system name is not specified', null);
 	if (!time) return callbackSet('There is no timestamp', null);
 
+	//console.log('system = ' + system);
+
 	// 0. cfName + rowKeys + columns + ...
 	var cfName = system;
-	var datas = vars2cassandra(vars,time);xs
+	var datas = vars2cassandra(vars,time);
 
 	async.parallel([
 		function(CB) {
@@ -151,7 +153,10 @@ vars2cassandra = function(vars,time) {
 
 setRollup = function(cfName, rowKey, timestamp, value, callback) {
 	helenus.getRow(cfName, rowKey, function(err,row,cf) {
-		if (err) callback(err);
+		if (err) {
+			console.log('setRollup error 1 : ' + err);
+			callback(err);
+		}
 		else {
 			var newCol = { // NEW VALUES
 				value: value,
@@ -159,7 +164,10 @@ setRollup = function(cfName, rowKey, timestamp, value, callback) {
 				max: value,
 				min: value
 			}
-			var c = row.get(timestamp); // GET COLUMN
+			if (!row || typeof(row)=='undefined') {
+				console.log('NO ROW!!!!!!!!!!');
+			}
+			else { var c = row.get(timestamp); } // GET COLUMN
 			if (c) { // there is already this column, so we update
 				c = JSON.parse(c.value); 
 				newCol.value = (c.count*c.value + newCol.value) / (c.count+1);
@@ -180,6 +188,8 @@ setRollup = function(cfName, rowKey, timestamp, value, callback) {
 
 exports.getRollUp = getRollUp = function(cfName, variable, start, end, callback) {
 	var rowKey = dif2rowKey(start,end,variable);
+	console.log('rowKey : ' + rowKey);
+	console.log('%o',rowKey);
 	if (rowKey.error) return callback(rowKey.error);
 	var results = new Array;
 	var k=0;
@@ -190,8 +200,6 @@ exports.getRollUp = getRollUp = function(cfName, variable, start, end, callback)
       else {
       	var columns = row.nameSlice(start,end);
       	for (var i=0; i<columns.length; i++) {
-      		// results.push = [columns[i].name, columns[i].value];
-      		// results.push(columns[i]);
       		var obj = JSON.parse(columns[i].value);
       		results[k] = [parseInt(columns[i].name), obj.value];
       		++k;
@@ -243,4 +251,50 @@ dif2rowKey = function(start, end, variable) { // start, end in javascript timest
 		}
 	}
 	return out;
+}
+
+exports.login = function(login,pass,callback) {
+	var out = {
+  	loggedIn: false,
+  	systems: null
+  };
+	helenus.getRow('Users',login, function(err,row,cf) {
+		if (err) callback(err,out);
+		else {
+			var passCass = row.get('password');
+			console.log('pass : ' + pass);
+			console.log('passCass : ' + passCass);
+			// 1. Check password
+			if (pass == passCass || (pass=='' && typeof(passCass)=='undefined')){
+				// 2. Get systems name
+				var columnsSys = row.nameSlice('s000000','s999999');
+				var systems = [];
+				for (var i=0; i<columnsSys.length; i++) {
+					systems[i] = columnsSys[i].value;
+				}
+				
+				// 3. Get systems informations
+				var systemsVar = {};
+				async.mapSeries(systems, system2var, function(err,results){
+				  for (var i=0; i<systems.length; i++) {
+				  	systemsVar[systems[i]] = results[i];
+				  }
+				  out.loggedIn = true;
+				  out.systems = systemsVar;
+				  callback(err,out);
+				});
+			}
+			else callback(null,out);
+		}
+	})
+}
+
+system2var = function(system, callback) {
+	helenus.getRow('Systems',system, function(err,row,cf) {
+		var vars = {};
+		for (var j=0; j<row.length; j++) {
+			vars[row[j].name] = row[j].value;
+  	}
+  	return callback(err,vars);
+	})
 }
