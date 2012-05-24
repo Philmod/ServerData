@@ -8,7 +8,7 @@ App.Views.LoginView = Backbone.View.extend({
   },
 
   initialize: function () {
-    this.model.bind('change:loggedIn', this.render, this); // TO TEST!!!
+    this.model.bind('change:loggedIn', this.render, this);
 
   	this.templateNotLogged = _.template(tpl.get('login'));
     this.templateLoggedIn = _.template(tpl.get('loggedIn'));
@@ -35,28 +35,23 @@ App.Views.LoginView = Backbone.View.extend({
   },
 
   loginSubmit: function(event) {
-    console.log('VIEWS LoginView loginSubmit');
-    ///// http://stackoverflow.com/questions/7340724/what-type-of-functions-go-where-when-using-backbone
     event.preventDefault();
     this.model.set({
       email: $("#email").val(),
       password: $("#password").val()
     });
-    this.model.login();
-    /////
-    
+    this.model.login();    
   },
 
   logOut: function() {
     this.model.logOut();
+    App.Collections.systems.reset();
   },
 
   render: function() {
     if (this.model.get('loggedIn')){ 
-      console.log(' ok ');
       $(this.el).empty().append(this.templateLoggedIn(this.model));
     } else {
-      console.log('ko');
       $(this.el).empty().append(this.templateNotLogged(this.model));
     }
     return this;

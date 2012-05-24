@@ -88,8 +88,9 @@ exports.set = set = function(jsonObj, callbackSet) {
 	      if (err) console.log('ERROR Systems new variables : ' + err);
 	      else {
 	      	for (var varName in vars) {
-		      	var column = row.get(varName);
-		      	if (!column) {
+	      		if (row) 
+			      	var column = row.get(varName);
+			      if (!column) {
 		      		var column = {};
 	      			column[varName] = '';
 							cfSystems.insert(system, column, function(err){ // INSERT
@@ -186,10 +187,14 @@ setRollup = function(cfName, rowKey, timestamp, value, callback) {
 	})
 }
 
-exports.getRollUp = getRollUp = function(cfName, variable, start, end, callback) {
+
+getRollUp = function(cfName, variable, start, end, callback) {
+	if (!start || !end) {
+		var date = new Date().getTime(),
+	    start = date-1000*3600*24*365*30,
+	    end = date+1000*3600*24*365*1;
+	}
 	var rowKey = dif2rowKey(start,end,variable);
-	console.log('rowKey : ' + rowKey);
-	console.log('%o',rowKey);
 	if (rowKey.error) return callback(rowKey.error);
 	var results = new Array;
 	var k=0;
@@ -211,11 +216,39 @@ exports.getRollUp = getRollUp = function(cfName, variable, start, end, callback)
 	async.forEach(rowKey.rowKeys, iterator, function(err){
     if (err) callback(err);
     else {
-    	console.log('results.length = ' + results.length);
-    	callback(null,results);
+    	// console.log('getRollUp : results.length = ' + results.length);
+    	// console.log('k length = ' + results.length);
+    	var out = {
+		    system: cfName,
+		    variable: variable,
+		    data: results
+		  };
+    	callback(null,out);
 	  }
 	});
 }
+
+
+exports.getRollUps = function(cfName, variables, start, end, callback) {
+
+	var iterator = function(variable, cb) {
+    getRollUp(cfName, variable, start, end, function(err,res) {
+    	cb(err,res);
+    })
+  }
+
+	async.map(variables, iterator, function(err, results){
+    if (err) callback(err);
+    else {
+    	console.log('GET ROLL UPS : results.length = ' + results.length);
+    	//console.log('%o',results);
+    	//console.log('%o',results[0]);
+    	callback(null,results);
+	  }
+	});
+
+}
+
 
 // Create the rowKey name from start, end and variable name
 dif2rowKey = function(start, end, variable) { // start, end in javascript timestamp
@@ -253,7 +286,7 @@ dif2rowKey = function(start, end, variable) { // start, end in javascript timest
 	return out;
 }
 
-exports.login = function(login,pass,callback) {
+exports.login = function(login,pass,logged,callback) {
 	var out = {
   	loggedIn: false,
   	email: null,
@@ -263,10 +296,14 @@ exports.login = function(login,pass,callback) {
 		if (err) callback(err,out);
 		else {
 			var passCass = row.get('password');
-			console.log('pass : ' + pass);
-			console.log('passCass : ' + passCass);
+
+			console.log('CHECK:: login='+login+' , passCass='+passCass);
+			console.log('%o',row);
+			console.log(typeof row[0] == 'undefined');
+			console.log(row[0] == 'undefined');
+
 			// 1. Check password
-			if (pass == passCass || (pass=='' && typeof(passCass)=='undefined')){
+			if ( (logged || pass == passCass || (pass=='' && typeof(passCass)=='undefined')) && !(typeof row[0] == 'undefined') ) {
 				// 2. Get systems name
 				var columnsSys = row.nameSlice('s000000','s999999');
 				var systems = [];

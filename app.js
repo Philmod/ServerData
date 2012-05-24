@@ -1,4 +1,4 @@
-var express = require('express')
+  var express = require('express')
   , httpStatus = require('http-status')
   , config = require(__dirname + '/config')
   , routes = require('./routes')
@@ -43,28 +43,12 @@ app.configure('production', function(){
 // Routes
 app.get('/', routes.index);
 app.post('/datas', routes.postDatas);
-app.get('/series', routes.getSeries);
-app.get('/series/id{id}/data/?start={start}&end={end}', routes.getSeriesId);
-
-app.get('/test', function(req,res) {
-  res.render('chartTest.jade', { status: 200, title: 'test Chart', layout: false });
-})
-
-app.post('/login', function(req,res) {
-  console.log('APP . POST /LOGIN');
-
-})
-
-/*app.get('*', function(req, res){  // to redirect all the other requests
-  console.log('%o',req.url);
-  res.redirect('/');
-});*/
-
+app.post('/pic', routes.postPic);
+// app.get('/series', routes.getSeries);
+// app.get('/series/id{id}/data/?start={start}&end={end}', routes.getSeriesId);
 
 app.listen(config.server.port);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
-
-
 
 
 ///// SOCKET.IO /////
@@ -85,10 +69,6 @@ io.configure(function () {
       app.sessionStore.get(sessionID, function (err, session) {
         if (err || !session) return callback('Error',false);
         else {
-          session.temp4 = 'test4';
-
-          app.sessionStore.set(sessionID, session);
-
           handshakeData.session = new Session(handshakeData,session); // create a session object, passing data as request and our just acquired session data
           callback(null, true); // we authorize all the sockets for now
         }
@@ -101,9 +81,6 @@ io.sockets.on('connection', function (socket) {
 
   var socket_username = null;
 
-  // setInterval(function() {
-  //   socket.emit('message','voici...');
-  // },1000);
   socket.on('message', function (data) {
     console.log('MESSAGE : ' + data);
   });
@@ -111,71 +88,39 @@ io.sockets.on('connection', function (socket) {
   //// LOG ////
   socket.on('isLogged', function(){
     if (socket.handshake.session.loggedIn) {
-      socket.emit('login',socket.handshake.session.resLogin);
+      models.login(socket.handshake.session.email,null,true,function(err,res) {
+        socket.emit('login',res);
+      })
     }
   });
   socket.on('login', function (data) {
-    models.login(data.email,data.password,function(err,res) {
+    models.login(data.email,data.password,false,function(err,res) {
       socket.handshake.session.loggedIn = res.loggedIn; // Add a property to the session
       if (res.loggedIn) {
-        console.log('%o',data);
         socket.handshake.session.email = data.email;
-        socket.handshake.session.resLogin = res;
       }
       else socket.handshake.session.email = null;
       app.sessionStore.set(socket.handshake.sessionID, socket.handshake.session); // SAVE
-
-      socket.emit('login',res);
+      socket.emit('login',res); // Emit Socket to the Client
     })
   });
   socket.on('logOut', function() {
     console.log('LOG OUT');
     socket.handshake.session.loggedIn = false;
     socket.handshake.session.email = null;
-    socket.handshake.session.resLogin = null;
     app.sessionStore.set(socket.handshake.sessionID, socket.handshake.session);
   });
   /////////////
 
   socket.on('getDatas', function (data) {
-    console.log('getDatas from client, with log = ' + data.sys + ' , var=' + data.variable + ' , start=' + data.start + ' , end=' + data.end);
-    
-    models.getRollUp(data.sys, data.variable, data.start, data.end, function(err,res) {
-      if (err) socket.emit('error', err);
-      else {
-        var out = {
-          title: data.sys,
-          name: [data.variable], // one name by curve
-          data: res
-        }
-        socket.emit('getDatas', out);
-      }
-    })
-    
-    // var dataTemp = require('./models/dataTemp.js');
-
-    // var data_ = [];
-    // for (var i=0; i<60; i++) {
-    //   var d = new Date(1970, 1, 1, 0, 0+i, 0, 0).getTime(); // ATTENTION: dans Highcharts le mois commence à 1, contrairement au js (!?)
-    //   data_[i] = [d, i]; 
-    // }
-    // console.log('ICI : ' + data_[0]);
-
-    // var data = {
-    //   title: 'USD to EUR exchange rate, This TITLE comes from server',
-    //   name: ['USD to EUR 1', 'USD to EUR 1'],
-    //   data: data_
-    // }
-    // socket.emit('getDatas', data);
-
-    // // TEMP: renvoyer régulièrement des nouveaux points
-    // setInterval(function() {
-    //   console.log('i = ' + i);
-    //   socket.emit('pushData', [new Date(1970+i, 1, 1, 0, 0, 0, 0).getTime(), i]);
-    //   i++;
-    // },1000);
-    // ///////////////////////////////////////////////////
-
+    if (typeof data.variables != 'object') data.variables = [data.variables];  // TEMP
+    console.log('getDatas from client, with log = ' + data.sys + ' , var=' + data.variables + ' , start=' + data.start + ' , end=' + data.end);
+    if (data.sys && data.variables) {
+      models.getRollUps(data.sys, data.variables, data.start || null, data.end || null, function(err,res) {
+        if (err) socket.emit('error', err);
+        else socket.emit('getDatas', res);
+      })
+    }
   });
 
 });

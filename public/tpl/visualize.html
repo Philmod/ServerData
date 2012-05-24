@@ -1,12 +1,27 @@
 <h3>Visualize test</h3>
 
 <center>
-	<select placeholder="Choose one system" id="sys">
-		<option value="Choose one system" selected="selected"></option>
-		<option value="sys1"> sys1 </option>
-		<option value="sys2"> sys2 </option>
+	<select id="systems" placeholder="Select one system">
+		<option value="" selected="selected">Select one system</option>
 	</select>
-	<input type="text" placeholder="Enter variable's name" id="variable" />
+	<select id="variables" disabled="disabled" placeholder="Select one variable">
+		<option value="" selected="selected">Select one variable</option>
+	</select>
+
+	<br><br>
+	
+	<select multiple id="var1">  
+		<option value="1">Option 1</option>  
+		<option value="2">Option 2</option>  
+		<option value="3">Option 3</option>  
+		<option value="4">Option 4</option>  
+	</select>  
+	<a href="#" id="add">add &gt;&gt;</a>  
+
+	<select multiple id="var2"></select>  
+	<a href="#" id="remove">&lt;&lt; remove</a>  
+
+
 </center>
 
 <div id="chart1"></div>

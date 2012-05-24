@@ -52,6 +52,14 @@ exports.postDatas = function(req, res){
 };
 
 /*
+ * POST pictures
+ */
+exports.postPic = function(req, res){
+  console.log('Post Picture');
+  
+}
+
+/*
  * GET series
  */
 exports.getSeries = function(req, res){
