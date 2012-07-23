@@ -4,7 +4,7 @@ config.server = {};
 config.feed = {};
 config.cassandra = {};
 
-config.server.port = 3001;
+config.server.port = 3000;
 config.server.domain = 'http://localhost:3000/';
 
 config.cassandra = {
