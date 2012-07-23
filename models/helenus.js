@@ -82,7 +82,7 @@ getOrCreateCF = function(cfName, callback) {
                 if (columnsSys[i].value == cfName) bool = true;
               }
               if (!bool) {
-                var numSys = columnsSys.length+1;
+                var numSys = parseFloat(columnsSys[columnsSys.length-1].name.substring(1,20)) + 1 ;
                 numSys = numSys.toString();
                 for (var i=numSys.length; i<6; i++) { numSys = '0' + numSys; } // we won't have one million systems...
                 numSys = 's' + numSys;
@@ -102,7 +102,7 @@ getOrCreateCF = function(cfName, callback) {
   ]);    
 }
 
-exports.insertRows = insertRow = function(cfName, rowKeys, columns, callback) {
+exports.insertRows = function(cfName, rowKeys, columns, callback) {
   getOrCreateCF(cfName, function(err, cf){
     if (err) callback(err,null);
     else {
@@ -133,12 +133,25 @@ exports.insertRows = insertRow = function(cfName, rowKeys, columns, callback) {
 
 exports.getRow = getRow = function(cfName, rowKey, callback) {
   getOrCreateCF(cfName, function(err, cf){
+    if (err) return callback(err, null);
     keyspace.get(cfName, function(err, cf){
-      if (err) callback(err, null)
+      if (err) return callback(err, null)
       else {
         cf.get(rowKey, function(err, row){
-          callback(null, row, cf);
+          return callback(null, row, cf);
         })
+      }
+    })
+  })
+}
+
+exports.getRows = function(cfName, callback) {
+  getOrCreateCF(cfName, function(err, cf){
+    if (err) return callback(err, null);
+    keyspace.get(cfName, function(err, cf){
+      if (err) return callback(err, null)
+      else {
+        return callback(null,cf);
       }
     })
   })

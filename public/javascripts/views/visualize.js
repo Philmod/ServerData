@@ -1,17 +1,35 @@
 App.Views.VisualizeView = Backbone.View.extend({
 
 	el: '.content',
+
+  events: {
+    "click #downloadSubmit": "downloadSubmit"
+  },
   
   initialize: function() {
 		this.template = _.template(tpl.get('visualize'));
   },
 
   render: function() {
-  	console.log('App.Views.VisualizeView : RENDER');
 		$(this.el).html(this.template());
-  	if (!App.Views.systemsView) App.Views.systemsView = new App.Views.SystemsView({el: $("#systems"), collection: App.Collections.systems}); // had to wait the #systems tag rendered
+  	App.Views.systemsView = new App.Views.SystemsView({el: $("#systems"), collection: App.Collections.systems}); // had to wait the #systems tag rendered
 		return this;
   },
+
+  downloadSubmit: function() {
+    var variablesCid = $("#visualizeForm: #variables").val(),
+      variablesName = [];
+    for (var i=0; i<variablesCid.length; i++) {
+      variablesName[i] = App.Collections.systems.getByCid($("#visualizeForm: #systems").val()).variables.getByCid(variablesCid[i]).get('name');
+    }
+    if (variablesCid.length!=1) {
+      $('#myModal').children('.modal-body').text('You have to select ONE variable');
+      $('#myModal').modal('show');
+    }
+    else {
+      window.location = '../download/' + App.Collections.systems.getByCid($("#visualizeForm: #systems").val()).get('name') + '/' + variablesName[0];
+    }
+  }
 
 });
 
@@ -57,6 +75,11 @@ App.Views.SystemsView = Backbone.View.extend({
 		this.systemsViews = [];
 		if (this.variablesView) this.variablesView.reset();
 	},
+
+  repopulate: function(){
+    this.reset();
+    this.addAll();
+  },
 
 	changeSelected: function(){
 		this.setSelected($(this.el).val());
@@ -109,18 +132,24 @@ App.Views.VariablesView = Backbone.View.extend({
 	},
 
 	reset: function(){
-		$(this.el).empty().append('<option selection="selection" value="">Select one variable</option>');
+		$(this.el).empty(); //.append('<option selection="selection" value="">Select one variable</option>')
 		$(this.el).attr('disabled', true);
 	},
 
 	changeSelected: function(){
-		// The user has selected the system and variable
-		App.Models.user.set({systemSelected: $("#systems").find('option:selected').text()});
-		App.Models.user.set({variablesSelected: $(this.el).find('option:selected').text()});
+		// The user has selected the system and variable(s)
+    App.Models.user.set({systemSelected: $("#systems").find('option:selected').text()});
+
+    var textvalues = [];
+    $('#variables :selected').each(function(i, selected) {
+        textvalues[i] = $(selected).text();
+    });
+		App.Models.user.set({variablesSelected: textvalues });
 		App.Socket.emit('getDatas', { sys: App.Models.user.get('systemSelected'), variables: App.Models.user.get('variablesSelected') });
 	}
 
 });
+
 ////////////////////////
 
 
@@ -128,7 +157,6 @@ App.Views.VariablesView = Backbone.View.extend({
 App.Views.Graph = Backbone.View.extend({
 
 	initialize: function() {
-		console.log('App.Views.Graph INITIALIZE');
 		this.chart = createChart(this.el, null);
 	},
 
@@ -148,7 +176,9 @@ App.Views.Graph = Backbone.View.extend({
         maxLength = s.data.length;
     });
 		if (maxLength==0) {
-      alert('No datas in this range!')
+      $('#modal-header-text').text('Error');
+      $('#myModal').children('.modal-body').text('No datas in this range');
+      $('#myModal').modal('show');
     }
     else {
 			this.removeAll();
@@ -209,7 +239,7 @@ function createChart(el,inputData) {
   var chart = new Highcharts.Chart({
     chart: {
         renderTo: el,
-        zoomType: 'xy',
+        zoomType: 'x',
         spacingRight: 20,
         events: {
           selection: selection

@@ -10,24 +10,24 @@ timeLV2JS = function(time) {
 	// JAVASCRIPT timestamp : number of MILLISECONDS since 1970/01/01
 	time = time*1000; // seconds --> milliseconds
 	time = time + timeLV0; // add of the offset timeLV0
-
-	/*var dat = new Date();
-	dat.setTime(time);
-	console.log('date = ' + dat);*/
-
 	return time;
 }
 
 exports.set = set = function(jsonObj, callbackSet) {
 	var vars = [],
-	system, time;
+	system, time, login, password ;
 	for (var i in jsonObj) {
 		if (i == 'system') {
 			var system = jsonObj[i];
 	  	system = system.replace(/-/g,"_"); // the column family name can't contain "-"
+	  	system = system.toLowerCase; // to lower case
 	  }
-		else if ( (i == 'timestamp') || (i == 'time') ) 
+		else if ( (i == 'timestamp') || (i == 'time') )  {
 			var time = timeLV2JS(jsonObj[i]);
+		}
+		else if ( (i == 'password') )  {
+			var password = jsonObj[i];
+		}
 		else if ( typeof jsonObj[i] == 'object' ) {
 			for (var j in jsonObj[i]) {
 				var name = i + '_' + j;
@@ -41,70 +41,78 @@ exports.set = set = function(jsonObj, callbackSet) {
 	}
 	if (!system) return callbackSet('The system name is not specified', null);
 	if (!time) return callbackSet('There is no timestamp', null);
+	if (!password) return callbackSet('There is no password', null);
 
-	//console.log('system = ' + system);
+	// Check LOGIN + PASSWORD
+	console.log('password : ' + password);
+	loginSystem(system,password, function(err,logged) {
+		if (err) return callbackSet(err, null);
+		else if (!logged) return callbackSet('Invalid username or password', null);
+		else {
+			// 0. cfName + rowKeys + columns + ...
+			var cfName = system;
+			var datas = vars2cassandra(vars,time);
 
-	// 0. cfName + rowKeys + columns + ...
-	var cfName = system;
-	var datas = vars2cassandra(vars,time);
-
-	async.parallel([
-		function(CB) {
-			// 1. Brut datas introduction
-			helenus.insertRows(cfName, datas.rowKeys.brut, datas.columns, function(err) {
-				if (err) CB(err);
-				else CB(null);
-			})
-		},
-		function(CB) {
-			// 2. Rolls-up
-			var nb=0;
-			for (var i=0; i<datas.columns.length; i++) {
-				(function(e){
-					async.parallel([
-						function(cb) { // MIN (one row by day)
-							setRollup(cfName, datas.rowKeys.m[e], datas.timestamps.m[e], datas.columns[e][0][1], function(err,res) { cb(err); })
-						},
-						function(cb) { // HOUR (one row by month)
-							setRollup(cfName, datas.rowKeys.h[e], datas.timestamps.h[e], datas.columns[e][0][1], function(err,res) { cb(err); })
-						},
-						function(cb) { // DAY (one row by year)
-							setRollup(cfName, datas.rowKeys.d[e], datas.timestamps.d[e], datas.columns[e][0][1], function(err,res) { cb(err); })
-						},
-					],
-					function(err) {
+			async.parallel([
+				function(CB) {
+					// 1. Brut datas introduction
+					helenus.insertRows(cfName, datas.rowKeys.brut, datas.columns, function(err) {
 						if (err) CB(err);
-						else {
-							++nb;
-							if (nb == datas.columns.length) { 
-								CB(null);
-							}
-						}
-					});
-				})(i);
-			}
-			// 3. Insert new variable(s) in 'Systems' CF (if doesn't exist)
-			helenus.getRow('Systems', system, function(err,row,cfSystems) {
-	      if (err) console.log('ERROR Systems new variables : ' + err);
-	      else {
-	      	for (var varName in vars) {
-	      		if (row) 
-			      	var column = row.get(varName);
-			      if (!column) {
-		      		var column = {};
-	      			column[varName] = '';
-							cfSystems.insert(system, column, function(err){ // INSERT
-		            if (err) console.log('ERROR Systems new variables 2 : ' + err);
-		          });
-		        }
-		      }
-		    }
-	    });
+						else CB(null);
+					})
+				},
+				function(CB) {
+					// 2. Rolls-up
+					var nb=0;
+					for (var i=0; i<datas.columns.length; i++) {
+						(function(e){
+							async.parallel([
+								function(cb) { // MIN (one row by day)
+									setRollup(cfName, datas.rowKeys.m[e], datas.timestamps.m[e], datas.columns[e][0][1], function(err,res) { cb(err); })
+								},
+								function(cb) { // HOUR (one row by month)
+									setRollup(cfName, datas.rowKeys.h[e], datas.timestamps.h[e], datas.columns[e][0][1], function(err,res) { cb(err); })
+								},
+								function(cb) { // DAY (one row by year)
+									setRollup(cfName, datas.rowKeys.d[e], datas.timestamps.d[e], datas.columns[e][0][1], function(err,res) { cb(err); })
+								},
+							],
+							function(err) {
+								if (err) CB(err);
+								else {
+									++nb;
+									if (nb == datas.columns.length) { 
+										CB(null);
+									}
+								}
+							});
+						})(i);
+					}
+					// 3. Insert new variable(s) in 'Systems' CF (if doesn't exist)
+					helenus.getRow('Systems', system, function(err,row,cfSystems) {
+			      if (err) console.log('ERROR Systems new variables : ' + err);
+			      else {
+			      	for (var varName in vars) {
+			      		if (row) 
+					      	var column = row.get(varName);
+					      if (!column) {
+				      		var column = {};
+			      			column[varName] = '';
+									cfSystems.insert(system, column, function(err){ // INSERT
+				            if (err) console.log('ERROR Systems new variables 2 : ' + err);
+				          });
+				        }
+				      }
+				    }
+			    });
+				}
+			],
+			function(err) {
+				callbackSet(err);
+			})
 		}
-	],
-	function(err) {
-		callbackSet(err);
 	})
+
 }
 
 // The vars2cassandra function create the various row keys (for data and roll-up), and the columns (name, value)
@@ -216,8 +224,6 @@ getRollUp = function(cfName, variable, start, end, callback) {
 	async.forEach(rowKey.rowKeys, iterator, function(err){
     if (err) callback(err);
     else {
-    	// console.log('getRollUp : results.length = ' + results.length);
-    	// console.log('k length = ' + results.length);
     	var out = {
 		    system: cfName,
 		    variable: variable,
@@ -241,12 +247,44 @@ exports.getRollUps = function(cfName, variables, start, end, callback) {
     if (err) callback(err);
     else {
     	console.log('GET ROLL UPS : results.length = ' + results.length);
-    	//console.log('%o',results);
-    	//console.log('%o',results[0]);
     	callback(null,results);
 	  }
 	});
 
+}
+
+exports.getRawData = function(cfName, variable, callback) {
+	var startTime = new Date('2010-01-01').getTime(), // start in 2010 (ServerData has been created in 2012)
+    endTime = new Date().getTime(); // stop TODAY
+
+	var rowKeys = [],
+		data = '';
+
+	for(loopTime = startTime; loopTime < endTime; loopTime += 86400000) { // 24*3600*1000 ms/day
+    var loopDay = new Date(loopTime);
+    var loopDayFormated = loopDay.toFormat('YYYYMMDD');
+    var rowKey = variable + '-' + loopDayFormated;
+    rowKeys.push(rowKey);
+	}
+
+	var iterator = function(rowKey, cb) {
+		helenus.getRow(cfName, rowKey, function(err,row,cf) {
+	    if (err) cb(err,null);
+	    else {
+	    	row.forEach(function(name,value,ts,ttl){
+	    		if (name && value) data += new Array(name,value) + '\n';
+	      });
+	      cb(null);
+	    }
+	  });
+	}
+	async.forEachSeries(rowKeys, iterator, function(err){
+    if (err) callback(err,null);
+    else {
+    	callback(null,data);
+	  }
+	});
+  
 }
 
 
@@ -286,21 +324,18 @@ dif2rowKey = function(start, end, variable) { // start, end in javascript timest
 	return out;
 }
 
-exports.login = function(login,pass,logged,callback) {
+exports.login = login = function(login,pass,logged,callback) {
 	var out = {
   	loggedIn: false,
   	email: null,
-  	systems: null
+  	systems: null,
+  	admin: false
   };
 	helenus.getRow('Users',login, function(err,row,cf) {
 		if (err) callback(err,out);
 		else {
 			var passCass = row.get('password');
-
-			console.log('CHECK:: login='+login+' , passCass='+passCass);
-			console.log('%o',row);
-			console.log(typeof row[0] == 'undefined');
-			console.log(row[0] == 'undefined');
+			if (passCass) passCass = passCass.value;
 
 			// 1. Check password
 			if ( (logged || pass == passCass || (pass=='' && typeof(passCass)=='undefined')) && !(typeof row[0] == 'undefined') ) {
@@ -311,6 +346,10 @@ exports.login = function(login,pass,logged,callback) {
 					systems[i] = columnsSys[i].value;
 				}
 				
+				var admin = row.get('admin');
+				if (admin) admin = admin.value;
+				else admin = false;
+
 				// 3. Get systems informations
 				var systemsVar = {};
 				async.mapSeries(systems, system2var, function(err,results){
@@ -320,10 +359,79 @@ exports.login = function(login,pass,logged,callback) {
 				  out.loggedIn = true;
 				  out.email = login;
 				  out.systems = systemsVar;
-				  callback(err,out);
+				  out.admin = admin;
+
+				  // 4. If admin, send the list of users and systems authorized
+				  if (admin) {
+				  	getUsersSystems(function(err,users) {
+						  if (err) console.log('error : ' + err);
+						  else {
+						  	out.users = users;
+						  	callback(err,out);
+						  }
+						})
+				  }
+				  else callback(err,out);
 				});
 			}
 			else callback(null,out);
+		}
+	})
+}
+
+getUsersSystems = function(callback) {
+	helenus.getRow('Users', 'List', function(err,row,cfUsers) { // Get the list of the users
+    if (err) return callback(err,null);
+    var users = {};
+    var usersArray = new Array();
+    row.forEach(function(name,value,ts,ttl){
+  		users[name] = new Array();
+  		usersArray.push(name);
+    });
+
+    function iterator(item, cb) { // ITERATOR
+      var user = item; 
+      var systems = new Array();
+      cfUsers.get(user, function(err,columnsUser) { // get user columns
+      	if (err) cb(err);
+        var nb = 0;
+        for (var i=0; i<columnsUser.length; i++) { // loop through the columns, need to catch only the systems
+          (function(e) {
+          	var n = columnsUser[e].name; // s*000001*
+          	if ( n.length===7 & n[0]==='s' & isNumeric(n.substring(1,20)) ) users[user].push(columnsUser[e].value);
+            if (e == columnsUser.length-1) cb(null);
+          })(i);
+        }
+      })
+    }
+    
+    async.forEach(usersArray, iterator, function(err) { 
+      if (err) return callback(err,null);
+      else {
+      	delete users['admin']; // we remove the 'admin' one
+      	return callback(null,users);
+      }
+    })
+
+  })
+}
+
+function isNumeric(data){
+  return parseFloat(data)==data;
+}
+
+loginSystem = function(system,password, callback) {
+	helenus.getRow(system,'data', function(err,row,cf) {
+		if (err) callback(err,out);
+		else {
+			var passSystemDB = row.get('password');
+			if (!passSystemDB) return callback('There is no password stored for this system, it must be introduced via the web page (admin)', false);
+			else {
+				if (passSystemDB.value == password) {
+					return callback(null,true); // OK
+				}
+				else return callback('The password is not correct',false);
+			}
 		}
 	})
 }
@@ -337,3 +445,195 @@ system2var = function(system, callback) {
   	return callback(err,vars);
 	})
 }
+
+///// ADMIN section /////
+checkIsAdmin = function(session,email,callback) {
+	login(email,null,true,function(err,res) {
+		if (err) return callback(err,null);
+		if (!res.admin || !session.admin) return callback('You aren\'t allowed to change these informations',false);
+		else return callback(null,res.admin);
+	})
+}
+
+exports.addWebUser = function(session,user,form,callback) {
+	checkIsAdmin(session, user.email, function(err,isAdmin) {
+		if (err) return callback(err,null);
+		if (isAdmin) {
+			///// Check email + passwords /////
+			if (form.password !== form.passwordBis) return callback('The two passwords are not the same',null); 
+			if (form.password.length < 8) return callback('The password length must be at least 8 characters',null); 
+	  	var filter = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+	  	if (!filter.test(form.email)) return callback('Please provide a valid email address',null);
+	  	///////////////////////////////////
+
+	  	///// Check if the user doesn't already exist & Add the User /////
+	  	helenus.getRow('Users', form.email, function(err,row,cfUsers) {
+	  		if (err) return callback(err,null);
+	  		if (row.count!=0) return callback('An account with this email already exists',null);
+	  		else {
+	  			cfUsers.insert(form.email, {password: form.password}, function(err){
+            if (err) return callback(err,null);
+            else { 
+            	///// Add the user to a List ///// (because we cannot retrieve all the rows of a CF with helenus)
+            	var user = {}; user[form.email] = null;
+            	cfUsers.insert('List', user, function(err){
+		            if (err) return callback(err,null);
+		            else return callback(null,'The new web user is inserted in the DB');
+		          });
+            }
+          });
+	  		}
+	  	});
+	  	//////////////////////////////////////////////////////////////////
+
+		}
+	});
+}
+
+exports.modifyWebUser = function(session,user,form,callback) {
+	checkIsAdmin(session, user.email, function(err,isAdmin) {
+		if (err) return callback(err,null);
+		if (isAdmin) {
+			if (form.passwordNew !== form.passwordNewBis) return callback('The two passwords are not the same',null); 
+			if (form.passwordNew.length!=0 && form.passwordNew.length < 8) return callback('The password length must be at least 8 characters',null); 
+			
+			helenus.getRow('Users', form.user, function(err,row,cfUsers) {
+				if(err) return callback(err,null);
+				var columnsSys = row.nameSlice('s000000','s999999'); // Get the actual list of the systems
+				async.series([
+					function(cb) {  // 1. Change password if needed
+						if (form.passwordNew.length!=0) {
+							cfUsers.insert(form.user, {password: form.passwordNew}, function(err){
+						    if (err) cb(err,null);
+						    else cb(null,'The password has been changed. ');
+						  });
+						}
+						else cb(null,null);
+					},
+					function(cb) {  // 2. Update systems access : systems to remove
+						for (var i=0; i<columnsSys.length; i++) { // loop through the existing systems in database
+							(function(e){
+								var bool = false;
+								form.sysAuth.forEach(function(sys){
+									if (sys === columnsSys[e].value) bool = true;
+								})
+								if (!bool) {
+									cfUsers.remove(form.user, columnsSys[e].name, {timestamp: new Date()}, function(err) { 
+										if (err) cb(err,null);
+										else {
+											if (e==columnsSys.length-1) cb(err,null);
+										}
+									})
+								}
+								else {
+									if (e==columnsSys.length-1) cb(err,null);
+								}
+							})(i);
+						}
+					},
+					function(cb) {  // 3. Update systems access : systems to add
+						for (var i=0; i<form.sysAuth.length; i++) { // loop through the existing systems in database
+							(function(e){
+								var bool = true; // == to add
+								for (var j=0; j<columnsSys.length; j++) {
+									if (form.sysAuth[e] === columnsSys[j].value) bool = false; // already exists
+								}
+								if (bool) {
+									var numSys = parseFloat(columnsSys[columnsSys.length-1].name.substring(1,20)) + e ;
+	                numSys = numSys.toString();
+	                for (var i=numSys.length; i<6; i++) { numSys = '0' + numSys; } // we won't have one million systems...
+	                numSys = 's' + numSys;
+	              	var column = {}; column[numSys] = form.sysAuth[e];
+									cfUsers.insert(form.user, column, function(err){
+								    if (err) cb(err,null);
+								    else {
+								    	if (e==columnsSys.length-1) cb(err,'The systems list has been updated. ');
+								    }
+								  });
+								}
+								else {
+									if (e==columnsSys.length-1) cb(err,'The systems list has been updated. ');
+								}
+							})(i);
+						}
+					}
+				],
+				function(err,results){
+					if (err) return callback(err,null);
+					var message = '';
+					results.forEach(function(r) {
+						if (r) message += r;
+					})
+					return callback(null,message)
+				})
+			})
+		}
+	})
+}
+
+exports.addSystemUser = function(session,user,form,callback) {
+	checkIsAdmin(session, user.email, function(err,isAdmin) {
+		if (err) return callback(err,null);
+		if (isAdmin) {
+
+			///// Check passwords /////
+			if (form.password !== form.passwordBis) return callback('The two passwords are not the same',null); 
+			if (form.password.length < 8) return callback('The password length must be at least 8 characters',null); 
+			if (form.login.length < 5) return callback('The login length must be at least 5 characters',null); 
+	  	///////////////////////////
+
+	  	helenus.getRow(form.login, 'data', function(err,row,cfSystems) {
+	  		if (err) return callback(err,null);
+			  cfSystems.insert('data', {password: form.password}, function(err){
+			    if (err) return callback(err,null);
+			    else return callback(null,'The password has been linked to this (new) system');
+			  });
+			});
+
+		}
+	});
+}
+
+exports.deleteSystem = function(session,user,form,callback) {
+	// Only delete the access for all users, the data will remain in the database.
+	checkIsAdmin(session, user.email, function(err,isAdmin) {
+		if (err) return callback(err,null);
+		if (isAdmin) {
+			helenus.getRows('Users', function(err,cfUsers) {
+			  
+			  cfUsers.get('List', function(err,users) { // Get the list of the users
+			    if (err) return callback(err,null);
+
+			    function iterator(item, cb) { // ITERATOR
+			      var user = item;
+			      cfUsers.get(user, function(err,systemsUser) { // get user systems
+			        var nb = 0;
+			        for (var j=0; j<systemsUser.length; j++) { // loop through the systems
+			          (function(e) {
+			            if (systemsUser[e].value === form.system) {
+			              cfUsers.remove(user, systemsUser[e].name, {timestamp: new Date()}, function(err) { // delete column if it's the system from the form
+			                nb++;
+			                if (err) cb(err);
+			                if (nb===systemsUser.length) cb(err); // leave the loop if finished
+			              })
+			            }
+			            else {
+			              nb++;
+			              if (nb===systemsUser.length) cb(err); // leave the loop if finished
+			            }
+			          })(j);
+			        }
+			      })
+			    }
+			    
+			    async.forEach(users, iterator, function(err) { // FOR EACH
+			      if (err) return callback(err,null);
+			      else return callback(null,'The system \'' + form.system + '\' has been deleted from all users');
+			    })
+
+			  })
+			});
+		}
+	});
+}
+/////////////////////////

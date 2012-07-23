@@ -1,26 +1,18 @@
-<h3>Visualize test</h3>
+<h3>Visualize data</h3>
 
 <center>
-	<select id="systems" placeholder="Select one system">
-		<option value="" selected="selected">Select one system</option>
-	</select>
-	<select id="variables" disabled="disabled" placeholder="Select one variable">
-		<option value="" selected="selected">Select one variable</option>
-	</select>
 
-	<br><br>
-	
-	<select multiple id="var1">  
-		<option value="1">Option 1</option>  
-		<option value="2">Option 2</option>  
-		<option value="3">Option 3</option>  
-		<option value="4">Option 4</option>  
-	</select>  
-	<a href="#" id="add">add &gt;&gt;</a>  
-
-	<select multiple id="var2"></select>  
-	<a href="#" id="remove">&lt;&lt; remove</a>  
-
+	<form id="visualizeForm" action="javascript:void(0);">
+		<select id="systems" name="systems" placeholder="Select one system">
+			<option value="" selected="selected">Select one system</option>
+		</select>
+		<br>
+		<select id="variables" name="variables" multiple disabled="disabled" placeholder="Select one variable" size='8'>
+			<option value="" selected="selected">Select one variable</option>
+		</select>
+		<br><br>
+		<button id="downloadSubmit" class="btn">Download data</button>
+	</form>
 
 </center>
 

@@ -1101,7 +1101,7 @@ textarea[readonly] {
  * Tables for, you guessed it, tabular data
  * ---------------------------------------- */
 table {
-  width: 100%;
+  /* width: 100%; */
   margin-bottom: 18px;
   padding: 0;
   font-size: 13px;
@@ -1118,8 +1118,8 @@ table th {
   vertical-align: middle;
 }
 table td {
-  vertical-align: top;
-  border-top: 1px solid #ddd;
+  vertical-align: middle;
+  /* border-top: 1px solid #ddd; */
 }
 table tbody th {
   border-top: 1px solid #ddd;

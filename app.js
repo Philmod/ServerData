@@ -40,12 +40,11 @@ app.configure('production', function(){
   app.use(express.errorHandler());
 });
 
-// Routes
+///// Routes /////
 app.get('/', routes.index);
 app.post('/datas', routes.postDatas);
-app.post('/pic', routes.postPic);
-// app.get('/series', routes.getSeries);
-// app.get('/series/id{id}/data/?start={start}&end={end}', routes.getSeriesId);
+app.get('/download/:system/:variable', routes.downloadData);
+//////////////////
 
 app.listen(config.server.port);
 console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
@@ -58,7 +57,7 @@ io.configure(function () {
   io.enable('browser client gzip');   // gzip the file
   io.set('transports', ['websocket','flashsocket','xhr-polling','jsonp-polling','htmlfile']);
   //io.set('transports', ['websocket','flashsocket','xhr-polling']); // 
-  io.set('log level', 2);
+  io.set('log level', 1);
   io.set('authorization', function(handshakeData, callback) {
     var cookies = parseCookie(handshakeData.headers.cookie); // Read cookies from handshake headers
     var sessionID = cookies['connect.sid']; // We're now able to retrieve session ID
@@ -79,8 +78,6 @@ io.configure(function () {
 
 io.sockets.on('connection', function (socket) {
 
-  var socket_username = null;
-
   socket.on('message', function (data) {
     console.log('MESSAGE : ' + data);
   });
@@ -92,14 +89,28 @@ io.sockets.on('connection', function (socket) {
         socket.emit('login',res);
       })
     }
+    else { 
+      res = { 
+        email: '',
+        loggedIn: false,
+        systems: [],
+        users: []
+      };
+      socket.emit('login', {});
+    }
   });
   socket.on('login', function (data) {
     models.login(data.email,data.password,false,function(err,res) {
       socket.handshake.session.loggedIn = res.loggedIn; // Add a property to the session
+      socket.handshake.session.admin = res.admin;
       if (res.loggedIn) {
         socket.handshake.session.email = data.email;
+        socket.handshake.session.systems = res.systems;
       }
-      else socket.handshake.session.email = null;
+      else {
+        socket.handshake.session.email = null;
+        socket.emit('error','Sorry, we coudn\'t verify your email and password');
+      }
       app.sessionStore.set(socket.handshake.sessionID, socket.handshake.session); // SAVE
       socket.emit('login',res); // Emit Socket to the Client
     })
@@ -108,10 +119,15 @@ io.sockets.on('connection', function (socket) {
     console.log('LOG OUT');
     socket.handshake.session.loggedIn = false;
     socket.handshake.session.email = null;
+    socket.handshake.session.admin = false;
+    socket.handshake.session.systems = null;
     app.sessionStore.set(socket.handshake.sessionID, socket.handshake.session);
   });
   /////////////
 
+
+
+  ///// DATAS /////
   socket.on('getDatas', function (data) {
     if (typeof data.variables != 'object') data.variables = [data.variables];  // TEMP
     console.log('getDatas from client, with log = ' + data.sys + ' , var=' + data.variables + ' , start=' + data.start + ' , end=' + data.end);
@@ -122,6 +138,37 @@ io.sockets.on('connection', function (socket) {
       })
     }
   });
+  /////////////////
+
+
+
+  ///// Admin : Web users and Systems /////
+  socket.on('addWebUser', function(data){
+    models.addWebUser(socket.handshake.session, data.user, JSON.parse(data.form), function(err,res) {
+      if (err) socket.emit('error',err);
+      else socket.emit('onAdminSuccess',res);
+    });
+  });
+  socket.on('modifyWebUser', function(data){
+    models.modifyWebUser(socket.handshake.session, data.user, JSON.parse(data.form), function(err,res) {
+      if (err) socket.emit('error',err);
+      else socket.emit('onAdminSuccess',res);
+    });
+  });
+  socket.on('addSystemUser', function(data){
+    models.addSystemUser(socket.handshake.session, data.user, JSON.parse(data.form), function(err,res) {
+      if (err) socket.emit('error',err);
+      else socket.emit('onAdminSuccess',res);
+    });
+  });
+  socket.on('deleteSystem', function(data){
+    models.deleteSystem(socket.handshake.session, data.user, JSON.parse(data.form), function(err,res) {
+      if (err) socket.emit('error',err);
+      else socket.emit('onAdminSuccess',res);
+    });
+  });
+  /////////////////////////////////////////
 
 });
 /////////////////////
+

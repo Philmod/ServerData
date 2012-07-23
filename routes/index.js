@@ -1,13 +1,12 @@
 var httpStatus = require('http-status')
-  , db = require('../models');
-
-var postedDatas = new Array();
+  , db = require('../models')
+  , async = require('async');
 
 /*
  * GET home page.
  */
 exports.index = function(req, res){
-  console.log('GET INDEX');
+  //console.log('GET INDEX');
   res.render('index',{
     title: "ServerData",
     host: ""
@@ -20,20 +19,12 @@ exports.index = function(req, res){
 var i = 0,
   datas = new Array();
 exports.postDatas = function(req, res){
-  /*console.log('%o',req);
-  console.log('REQ.HEADERS : ');
-  console.log('%o',req.headers);
-  console.log('%o',req.body);*/
-
   if (req.is('application/xml')) {
-    console.log('%o',req.body);
-
+    //console.log('%o',req.body);
+    res.send('xml is not an accepted format' || err, httpStatus.INTERNAL_SERVER_ERROR);
   }
   else if (req.is('application/json')) {
     var data = req.body;
-
-    postedDatas.push(data);
-    if (postedDatas.length % 1000 == 0) console.log('postedDatas.length = ' + postedDatas.length);
 
     db.set(data, function(err) {
       if (err) {
@@ -52,26 +43,38 @@ exports.postDatas = function(req, res){
 };
 
 /*
- * POST pictures
+ * GET data
  */
-exports.postPic = function(req, res){
-  console.log('Post Picture');
+exports.downloadData = function(req, res){
+  //console.log('Get download');
+
+  ///// Arguments /////
+  //console.log('%o',req.params);
+  /////////////////////
+
+  ///// Check permission through session /////
+  var bool = false;
+  for (var sys in req.session.systems) {
+    if (sys === req.params.system) bool = true;
+  }
+  if (!bool) return res.redirect(''); // this user (session) has no access to this system
+  ////////////////////////////////////////////
   
+  db.getRawData(req.params.system, req.params.variable, function(err,data) {
+    if (err) {
+      console.log('ERROR downloadData, REDIRECT : ' + err);
+      res.redirect('');
+    }
+    else {
+      console.log('routes data.length : ' + data.length);
+
+      var date = new Date().toFormat('YYYYMMDD');
+      var filename = date + '_' + req.params.system + '_' + req.params.variable + '.csv';
+      res.header('content-type','text/csv');
+      res.header('content-disposition','attachment');
+      res.attachment(filename);
+      res.end(data,'UTF-8');
+    }
+  })
+
 }
-
-/*
- * GET series
- */
-exports.getSeries = function(req, res){
-  // Pour avoir la liste de ses séries
-  res.send('En construction...', 200);
-};
-
-/*
- * GET series content
- */
-exports.getSeriesId = function(req, res){
-  // Read series data by id.
-  // start: an ISO 8601 date: 2012-01-08T00:21:54.000+0000
-  res.send('En construction...', 200);
-};

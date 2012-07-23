@@ -17,9 +17,9 @@ App.Views.TopBarView = Backbone.View.extend({
           id: 'linkVisualize',
           link: '#visualize'
         }, {
-          desc: 'About',
-          id: 'linkAbout',
-          link: '#about'
+          desc: 'Admin',
+          id: 'linkAdmin',
+          link: '#admin'
         }, {
           desc: 'Contact',
           id: 'linkContact',
