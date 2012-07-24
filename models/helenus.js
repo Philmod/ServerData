@@ -82,7 +82,8 @@ getOrCreateCF = function(cfName, callback) {
                 if (columnsSys[i].value == cfName) bool = true;
               }
               if (!bool) {
-                var numSys = parseFloat(columnsSys[columnsSys.length-1].name.substring(1,20)) + 1 ;
+                if (columnsSys[columnsSys.length-1]) var numSys = parseFloat(columnsSys[columnsSys.length-1].name.substring(1,20)) + 1 ;
+                else var numSys = 1;
                 numSys = numSys.toString();
                 for (var i=numSys.length; i<6; i++) { numSys = '0' + numSys; } // we won't have one million systems...
                 numSys = 's' + numSys;
