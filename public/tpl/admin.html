@@ -1,0 +1,106 @@
+<h2>Web users</h2>
+
+<h4>Add a user</h4>
+<p>This user will have access to the web site, but the admin need to configure the systems user can see. </p>
+<form id="userAddForm" action="javascript:void(0);">
+	<table>
+		<tr>
+			<td>Email:</td>
+			<td><input id="email" name="email" type="text" value="" /></td>
+		</tr>
+		<tr>
+			<td>Password:</td>
+			<td><input id="password" name="password" type="password" value="" /></td>
+		</tr>
+		<tr>
+			<td>Confirm password:</td>
+			<td><input id="passwordBis" name="passwordBis" type="password" value="" /></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td><button id="addUserSubmit" class="btn btn-primary">Add</button></td>
+		</tr>
+	</table>
+</form>
+
+
+<h4>Modify a user's access </h4>
+<form id="userAccessForm" action="javascript:void(0);">
+	<table>
+		<tr>
+			<td>User:</td>
+			<td colspan="3">
+				<select id="users" name="users" placeholder="Select one user">
+					<option value="" selected="selected">Select one user</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td>Systems authorized:</td>
+			<td>
+				<select id="SystemsAuthorized" name="SystemsAuthorized" size="5" MULTIPLE>
+        </select>
+			</td>
+			<td align="center" valign="middle">
+				<input type="Button" id="userAccessAddButton" value="<< Add" class="btn" style="width:100px"><br>
+        <br>
+        <input type="Button" id="userAccessRemoveButton" value="Remove >>" class="btn" style="width:100px">
+			</td>
+			<td>
+				<select id="SystemsAll" name="SystemsAll" size="5" MULTIPLE>
+        </select>
+			</td>
+		</tr>
+		<tr>
+			<td>New Password:</td>
+			<td colspan="3"><input id="passwordNew" name="password" type="password" value="" /></td>
+		</tr>
+		<tr>
+			<td>Confirm new password:</td>
+			<td colspan="3"><input id="passwordNewBis" name="passwordBis" type="password" value="" /></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td colspan="3"><button id="userAccessSubmit" class="btn btn-primary">Submit</button></td>
+		</tr>
+	</table>
+</form>
+
+
+
+
+
+<hr>
+
+<h2>Systems configuration</h2>
+
+<h4>Add a new system (cRIO, ...) or modify an existing password</h4>
+<form id="systemAddForm" action="javascript:void(0);">
+	<table>
+		<tr>
+			<td>Login (system name):</td>
+			<td><input id="login" name="login" type="text" value="" onkeyup="javascript:this.value = this.value.toLowerCase().replace(/-/g,'_')";/> <em>(Lower case, and no "-" character)</em></td>
+		</tr>
+		<tr>
+			<td>Password:</td>
+			<td><input id="passwordSys" name="password" type="password" value=""/></td>
+		</tr>
+		<tr>
+			<td>Confirm password:</td>
+			<td><input id="passwordSysBis" name="passwordBis" type="password" value="" /></td>
+		</tr>
+		<tr>
+			<td></td>
+			<td><button id="addSystemSubmit" class="btn btn-primary">Add</button></td>
+		</tr>
+	</table>
+</form>
+
+<h4>Delete a system</h4>
+<p>This function will only delete the access to the data for all users, but the data will still remain in the database. </p>
+<form id="systemDeleteForm" action="javascript:void(0);">
+	<select id="systemsDel" placeholder="Select one system">
+		<option value="" selected="selected">Select one system</option>
+	</select>
+	<button id="deleteSystemSubmit" class="btn btn-primary">Delete</button>
+</form>
