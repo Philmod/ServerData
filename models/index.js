@@ -246,7 +246,7 @@ exports.getRollUps = function(cfName, variables, start, end, callback) {
 	async.map(variables, iterator, function(err, results){
     if (err) callback(err);
     else {
-    	console.log('GET ROLL UPS : results.length = ' + results.length);
+    	// console.log('GET ROLL UPS : results.length = ' + results.length);
     	callback(null,results);
 	  }
 	});

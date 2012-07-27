@@ -6,7 +6,7 @@ var httpStatus = require('http-status')
  * GET home page.
  */
 exports.index = function(req, res){
-  //console.log('GET INDEX');
+  console.log('GET INDEX');
   res.render('index',{
     title: "ServerData",
     host: ""
@@ -21,7 +21,7 @@ var i = 0,
 exports.postDatas = function(req, res){
   if (req.is('application/xml')) {
     //console.log('%o',req.body);
-    res.send('xml is not an accepted format' || err, httpStatus.INTERNAL_SERVER_ERROR);
+    res.send(httpStatus.INTERNAL_SERVER_ERROR,'xml is not an accepted format' || err);
   }
   else if (req.is('application/json')) {
     var data = req.body;
@@ -29,16 +29,16 @@ exports.postDatas = function(req, res){
     db.set(data, function(err) {
       if (err) {
         console.log('db.set : ERROR : ' + err);
-        res.send(err.message || err, httpStatus.INTERNAL_SERVER_ERROR);
+        res.send(httpStatus.INTERNAL_SERVER_ERROR,err.message || err);
       }
       else {
-        res.send('OK',httpStatus.OK);
+        res.send(httpStatus.OK, 'OK');
       }
     })
     
   }
   else {
-    res.send('This content-type is not supported', httpStatus.UNSUPPORTED_MEDIA_TYPE);
+    res.send(httpStatus.UNSUPPORTED_MEDIA_TYPE, 'This content-type is not supported');
   }
 };
 
